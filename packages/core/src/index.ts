@@ -102,3 +102,6 @@ function generateWarnings(example: CustomerExample): string[] {
 
 // Re-export all types
 export * from './types/index.js';
+
+// Re-export converter function (needed by database package for manual edits)
+export { customerExampleToPatches } from './toPatches/toPatches.js';

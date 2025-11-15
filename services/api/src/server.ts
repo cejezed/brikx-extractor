@@ -1,64 +1,59 @@
+// Brikx PvE Analyzer API
+// Main server file
 import express from 'express';
-import multer from 'multer';
-import { extractFromFile } from '@brikx/extractor-core';
-import { unlink } from 'fs/promises';
+import cors from 'cors';
+import projectsRouter from './routes/projects.js';
+import featureFlagsRouter from './routes/feature-flags.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configure multer for file uploads
-const upload = multer({
-  dest: '/tmp/brikx-uploads',
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB max
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedExts = ['.txt', '.docx', '.pdf'];
-    const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf('.'));
-
-    if (allowedExts.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Unsupported file type: ${ext}. Allowed: ${allowedExts.join(', ')}`));
-    }
-  },
-});
-
 // Middleware
-app.use(express.json());
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'brikx-extractor-api' });
+  res.json({
+    status: 'ok',
+    service: 'brikx-pve-analyzer-api',
+    version: '0.1.0',
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// Main conversion endpoint
-app.post('/convert', upload.single('file'), async (req, res) => {
+// API Routes
+app.use('/api/projects', projectsRouter);
+app.use('/api/feature-flags', featureFlagsRouter);
+
+// Legacy /convert endpoint (backwards compatibility with original design)
+import { Router } from 'express';
+import multer from 'multer';
+import { extractFromFile } from '@brikx/extractor-core';
+import { unlink } from 'fs/promises';
+
+const legacyRouter = Router();
+const upload = multer({ dest: '/tmp/brikx-uploads' });
+
+legacyRouter.post('/convert', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log(`Processing file: ${req.file.originalname}`);
+    console.log(`[Legacy] Processing file: ${req.file.originalname}`);
 
-    // Extract data from the uploaded file
     const result = await extractFromFile(req.file.path);
-
-    // Clean up temporary file
     await unlink(req.file.path);
 
-    // Return result
     res.json(result);
   } catch (error) {
-    console.error('Conversion error:', error);
+    console.error('[Legacy] Conversion error:', error);
 
-    // Clean up file if it exists
     if (req.file?.path) {
       try {
         await unlink(req.file.path);
-      } catch (unlinkError) {
-        // Ignore cleanup errors
-      }
+      } catch {}
     }
 
     res.status(500).json({
@@ -68,9 +63,44 @@ app.post('/convert', upload.single('file'), async (req, res) => {
   }
 });
 
+app.use('/', legacyRouter);
+
+// Error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[Error]', err);
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        error: 'File too large',
+        message: 'Maximum file size is 50MB',
+      });
+    }
+  }
+
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message || 'Unknown error',
+  });
+});
+
 // Start server
 app.listen(PORT, () => {
-  console.log(`Brikx Extractor API running on http://localhost:${PORT}`);
-  console.log(`  POST /convert - Upload and convert documents`);
-  console.log(`  GET /health - Health check`);
+  console.log(`\n🚀 Brikx PvE Analyzer API running on http://localhost:${PORT}`);
+  console.log(`\n📋 Available endpoints:`);
+  console.log(`   GET  /health                       - Health check`);
+  console.log(`   POST /api/projects/upload          - Upload PvE document`);
+  console.log(`   GET  /api/projects                 - List all projects`);
+  console.log(`   GET  /api/projects/stats           - Get statistics`);
+  console.log(`   GET  /api/projects/:id             - Get project details`);
+  console.log(`   PATCH /api/projects/:id            - Update project (manual edits)`);
+  console.log(`   POST /api/projects/:id/export      - Export to Brikx`);
+  console.log(`   DELETE /api/projects/:id           - Delete project`);
+  console.log(`   GET  /api/feature-flags            - List feature flags`);
+  console.log(`   GET  /api/feature-flags/:name      - Get feature flag`);
+  console.log(`   PATCH /api/feature-flags/:name     - Update feature flag`);
+  console.log(`   POST /convert                      - Legacy convert endpoint\n`);
+
+  console.log(`💾 Database: ${process.env.SUPABASE_URL || 'Not configured'}`);
+  console.log(`🔑 Auth: ${process.env.SUPABASE_ANON_KEY ? 'Configured' : 'Not configured'}\n`);
 });
