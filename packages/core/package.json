@@ -18,10 +18,12 @@
   },
   "dependencies": {
     "mammoth": "^1.6.0",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/pdf-parse": "^1.1.4",
+    "@types/xlsx": "^0.0.36",
     "typescript": "^5.3.3"
   }
 }

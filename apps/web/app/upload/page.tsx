@@ -251,7 +251,7 @@ export default function UploadPage() {
                 <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
                   1
                 </span>
-                <p>Upload een PvE document (PDF, DOCX of TXT)</p>
+                <p>Upload een PvE document (PDF, DOCX, TXT, XLSX of XLS)</p>
               </div>
               <div className="flex gap-3">
                 <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">

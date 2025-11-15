@@ -20,6 +20,8 @@ export function FileUpload({
     'application/pdf': ['.pdf'],
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     'text/plain': ['.txt'],
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+    'application/vnd.ms-excel': ['.xls'],
   },
   maxSize = 50 * 1024 * 1024, // 50MB
   disabled = false,
@@ -92,7 +94,7 @@ export function FileUpload({
                 Sleep PvE document hierheen of klik om te selecteren
               </p>
               <p className="text-sm text-muted-foreground">
-                Ondersteund: PDF, DOCX, TXT (max {formatFileSize(maxSize)})
+                Ondersteund: PDF, DOCX, TXT, XLSX, XLS (max {formatFileSize(maxSize)})
               </p>
             </>
           )}
