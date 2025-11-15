@@ -1,0 +1,21 @@
+{
+  "name": "@brikx/extractor-cli",
+  "version": "0.1.0",
+  "description": "CLI tool for Brikx document extraction",
+  "type": "module",
+  "bin": {
+    "brikx-extract": "./dist/bin/brikx-extract.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@brikx/extractor-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}

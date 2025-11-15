@@ -1,0 +1,27 @@
+{
+  "name": "@brikx/extractor-core",
+  "version": "0.1.0",
+  "description": "Core extraction logic for Brikx document processing",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "mammoth": "^1.6.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/pdf-parse": "^1.1.4",
+    "typescript": "^5.3.3"
+  }
+}
