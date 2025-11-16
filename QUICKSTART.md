@@ -11,13 +11,13 @@ Complete PvE document analyzer met extractie, review en export naar Brikx.
 - ✅ Manual edits tracking
 - ✅ Brikx export (feature flag protected)
 
-### **Fase 2: Frontend**
-- ✅ **Upload Page** - Drag & drop, progress, polling
+### **Fase 2: Frontend (100%)** ✅
+- ✅ **Upload Page** - Drag & drop, progress, polling, Excel support
+- ✅ **Review Page** - Side-by-side editor met 4 tabs (Basis, Wensen, Signalen, Patches)
+- ✅ **Overview Dashboard** - Projects table + stats cards
 - ✅ Homepage met navigatie
 - ✅ API client (type-safe)
-- ✅ UI components (button, card, progress)
-- ⏳ Review page (nog te bouwen)
-- ⏳ Overview dashboard (nog te bouwen)
+- ✅ UI components (button, card, progress, tabs, table, input, badge, etc.)
 
 ---
 
@@ -59,24 +59,73 @@ pnpm dev
 
 ---
 
-## 🧪 Testen van de Upload Flow
+## 🧪 Testen van de Complete Flow
 
-### **Methode 1: Via Web UI (Aanbevolen)**
+### **Methode 1: Via Web UI - Complete Flow (Aanbevolen)**
 
-1. **Open**: http://localhost:3000
-2. **Klik**: "Upload" card
-3. **Upload**: Sleep `tests/fixtures/intake.txt` naar de dropzone
-4. **Klik**: "Upload & Analyseer"
-5. **Wacht**: Upload (progress bar) → Processing (spinner) → Success ✅
-6. **Bekijk**: Extracted data preview (budget €250.000, type "verbouwing", etc.)
+#### 1. **Home** → http://localhost:3000
+- 3 cards: Upload, Overview, Settings
 
-**Verwacht resultaat:**
+#### 2. **Upload Page** → http://localhost:3000/upload
+1. Sleep `tests/fixtures/intake.xlsx` (of .txt, .pdf, .docx) naar de dropzone
+2. Klik "Upload & Analyseer"
+3. Wacht: Upload → Processing → Success ✅
+4. Klik "Ga naar Review →"
+
+**Ondersteunde formaten:** PDF, DOCX, TXT, XLSX, XLS (max 50MB)
+
+#### 3. **Review Page** → http://localhost:3000/review/[id]
+- **Links:** Document viewer (placeholder)
+- **Rechts:** 4 tabs met geëxtraheerde data
+
+**Tab 1 - Basis:**
+- Edit projectType (badges: nieuwbouw, verbouwing, etc.)
+- Edit budget (€ formatting)
+- Edit locatie
+
+**Tab 2 - Wensen:**
+- View wishes list
+- Add nieuwe wens
+- Edit/delete bestaande wensen
+- Count: X wensen
+
+**Tab 3 - Signalen:**
+- Emotionele signalen met:
+  - Type icons (concern, enthusiasm, urgency, etc.)
+  - Intensity bars (0-100%)
+  - Quote + interpretatie + followup prompt
+- Stats: totaal signalen, zorgen count
+
+**Tab 4 - Patches:**
+- Read-only view van Brikx patches
+- Gegroepeerd per chapter (basis, wensen, budget, etc.)
+- Per patch: operation (set/append/remove), path, value
+
+**Acties:**
+- Klik "Opslaan" → PATCH API → Patches worden geregenereerd
+- Klik "Export naar Brikx" → POST export (als feature flag enabled)
+
+#### 4. **Overview Dashboard** → http://localhost:3000/overview
+**Stats Cards (bovenaan):**
+- Totaal Projecten (met count in review)
+- Totaal Budget (met gemiddelde)
+- Totaal Wensen (met gemiddelde)
+- Totaal Zorgen (met percentage)
+
+**Projects Table:**
+- Search op bestandsnaam
+- Filter op status (All, review, approved, etc.)
+- Kolommen: Bestand, Type, Budget, Wensen, Status, Datum, Acties
+- Klik op row → ga naar Review page
+- "X van Y projecten" summary
+
+**Verwacht resultaat na complete flow:**
 ```
-✓ Extractie Succesvol!
-Project Type: verbouwing
-Budget: €250.000
-Locatie: Amsterdam
-4 Wensen, 7 Emotionele Signalen
+✓ Document geüpload en geanalyseerd
+✓ Data bekeken en bewerkt in Review page
+✓ Patches automatisch gegenereerd
+✓ Wijzigingen opgeslagen
+✓ Project zichtbaar in Overview table met stats
 ```
 
 ### **Methode 2: Via CLI (Voor debugging)**
@@ -170,13 +219,17 @@ brikx-extractor/
 ├── apps/
 │   └── web/               ✅ Next.js 15 UI
 │       ├── app/
-│       │   ├── page.tsx           ✅ Homepage
-│       │   └── upload/page.tsx    ✅ Upload page
+│       │   ├── page.tsx              ✅ Homepage
+│       │   ├── upload/page.tsx       ✅ Upload page
+│       │   ├── review/[id]/page.tsx  ✅ Review page
+│       │   └── overview/page.tsx     ✅ Overview dashboard
 │       ├── components/
-│       │   ├── ui/                ✅ Button, Card, Progress
-│       │   └── file-upload.tsx    ✅ Drag & drop component
+│       │   ├── ui/                   ✅ Tabs, Table, Input, Badge, etc.
+│       │   ├── review/               ✅ Basis, Wensen, Signalen, Patches tabs
+│       │   ├── overview/             ✅ Stats cards, Projects table
+│       │   └── file-upload.tsx       ✅ Drag & drop component
 │       └── lib/
-│           └── api-client.ts      ✅ Type-safe API wrapper
+│           └── api-client.ts         ✅ Type-safe API wrapper
 └── tests/
     └── fixtures/          ✅ Sample PvE documents
 ```
@@ -250,25 +303,41 @@ export SUPABASE_ANON_KEY=your-key
 
 ---
 
-## 🚧 Wat Nog Moet
+## 🚧 Mogelijke Uitbreidingen
 
-### **UI Pages**
-- [ ] Review page (`/review/[id]`) - Side-by-side PDF viewer + editable data
-- [ ] Overview dashboard (`/overview`) - Projects table + stats
-- [ ] Settings page - Feature flags management
+### **Review Page Improvements**
+- [ ] PDF viewer component (react-pdf integration i.p.v. placeholder)
+- [ ] PDF text highlighting met bounding boxes
+- [ ] AI suggestions panel (gebruik ai_suggestions table)
+- [ ] Manual edits diff viewer (show old vs new values)
+- [ ] Field-level change tracking (nu simplified)
 
-### **Components**
-- [ ] PDF viewer component (react-pdf integration)
-- [ ] Extracted data panel (tabs: Basis, Wensen, Signalen, Patches)
-- [ ] Projects table with filters
-- [ ] Stats cards (budget, wishes, concerns)
+### **Overview Dashboard Improvements**
+- [ ] Advanced filters (date range, budget range, etc.)
+- [ ] Sortable columns
+- [ ] Export to CSV/Excel
+- [ ] Bulk actions (delete, export multiple)
+- [ ] Charts/graphs (budget distribution, project types, etc.)
 
-### **Features**
+### **New Pages**
+- [ ] Settings page - Feature flags management UI
+- [ ] Project details page - Full project history + audit log
+
+### **Advanced Features**
 - [ ] Real-time progress (WebSocket instead of polling)
-- [ ] PDF text highlighting (bounding boxes)
-- [ ] Manual edits diff viewer
-- [ ] Feature flags UI
-- [ ] Authentication (Supabase Auth)
+- [ ] Batch upload (multiple files at once)
+- [ ] Template management (save/reuse extraction templates)
+- [ ] Collaboration (comments, approvals, workflows)
+- [ ] Authentication (Supabase Auth + RLS)
+- [ ] Multi-tenancy (workspace support)
+- [ ] Notifications (email/slack bij nieuwe uploads)
+
+### **Performance & DevOps**
+- [ ] Redis caching voor stats
+- [ ] Background job queue (Bull/BullMQ)
+- [ ] Docker compose setup
+- [ ] CI/CD pipeline
+- [ ] Monitoring & logging (Sentry, DataDog)
 
 ---
 
@@ -310,4 +379,14 @@ pnpm --filter web start
 
 ---
 
-✨ **De Upload flow werkt 100%!** Test het nu met je eigen PvE documenten!
+✨ **Het PvE Analyzer systeem is volledig functioneel!**
+
+Complete flow werkt van Upload → Review → Export:
+- ✅ Upload documenten (PDF, DOCX, TXT, XLSX, XLS)
+- ✅ Review en bewerk geëxtraheerde data
+- ✅ View en edit wensen, signalen, core data
+- ✅ Automatic patch generation (Brikx compatible)
+- ✅ Overview dashboard met stats en projecten table
+- ✅ Export naar Brikx (feature flag protected)
+
+**Start de servers en test met je eigen PvE documenten!**
