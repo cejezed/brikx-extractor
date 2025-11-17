@@ -1,9 +1,15 @@
 // Brikx PvE Analyzer API
 // Main server file
+
+// Load environment variables FIRST
+import { config } from 'dotenv';
+config(); // This loads .env file
+
 import express from 'express';
 import cors from 'cors';
 import projectsRouter from './routes/projects.js';
 import featureFlagsRouter from './routes/feature-flags.js';
+import { isUsingInMemory } from '@brikx/extractor-database';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -101,6 +107,14 @@ app.listen(PORT, () => {
   console.log(`   PATCH /api/feature-flags/:name     - Update feature flag`);
   console.log(`   POST /convert                      - Legacy convert endpoint\n`);
 
-  console.log(`💾 Database: ${process.env.SUPABASE_URL || 'Not configured'}`);
-  console.log(`🔑 Auth: ${process.env.SUPABASE_ANON_KEY ? 'Configured' : 'Not configured'}\n`);
+  // Database status
+  if (isUsingInMemory()) {
+    console.log(`💾 Database: IN-MEMORY (data lost on restart)`);
+    console.log(`   ⚠️  Set SUPABASE_URL and SUPABASE_ANON_KEY in .env for persistent storage\n`);
+  } else {
+    const dbUrl = process.env.SUPABASE_URL || '';
+    const dbHost = dbUrl.replace('https://', '').replace('http://', '').split('/')[0];
+    console.log(`💾 Database: ✅ Supabase (${dbHost})`);
+    console.log(`🔑 Auth: ${process.env.SUPABASE_ANON_KEY ? '✅ Configured' : '❌ Not configured'}\n`);
+  }
 });
