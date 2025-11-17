@@ -4,6 +4,7 @@
 
 export * from './client.js';
 export * from './types/database.js';
+export { inMemoryStore } from './in-memory-store.js';
 
 // Query functions
 export * from './queries/projects.js';

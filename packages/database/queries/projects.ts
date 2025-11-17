@@ -1,7 +1,8 @@
 // Project queries - Type-safe database operations
 // All extraction data adheres to @brikx/extractor-core types
 
-import { getSupabaseClient } from '../client.js';
+import { getSupabaseClient, isUsingInMemory } from '../client.js';
+import { inMemoryStore } from '../in-memory-store.js';
 import type {
   Project,
   ProjectInsert,
@@ -17,9 +18,13 @@ import { customerExampleToPatches } from '@brikx/extractor-core';
  * Create a new project
  */
 export async function createProject(data: ProjectInsert): Promise<Project> {
-  const supabase = getSupabaseClient();
+  // In-memory fallback
+  if (isUsingInMemory() || !getSupabaseClient()) {
+    return await inMemoryStore.createProject(data);
+  }
 
-  const { data: project, error } = await supabase
+  const supabase = getSupabaseClient();
+  const { data: project, error} = await supabase!
     .from('projects')
     .insert(data as any)
     .select()
@@ -36,9 +41,13 @@ export async function getProject(
   id: string,
   options?: { includeChunks?: boolean; includeSuggestions?: boolean }
 ): Promise<ProjectWithRelations | null> {
-  const supabase = getSupabaseClient();
+  // In-memory fallback
+  if (isUsingInMemory() || !getSupabaseClient()) {
+    return await inMemoryStore.getProject(id);
+  }
 
-  let query = supabase.from('projects').select('*').eq('id', id).single();
+  const supabase = getSupabaseClient();
+  let query = supabase!.from('projects').select('*').eq('id', id).single();
 
   const { data: project, error } = await query;
 
@@ -51,7 +60,7 @@ export async function getProject(
 
   // Load relations if requested
   if (options?.includeChunks) {
-    const { data: chunks } = await supabase
+    const { data: chunks } = await supabase!
       .from('document_chunks')
       .select('*')
       .eq('project_id', id)
@@ -78,9 +87,13 @@ export async function getProject(
  * List projects with filters
  */
 export async function listProjects(filters?: ProjectFilters): Promise<Project[]> {
-  const supabase = getSupabaseClient();
+  // In-memory fallback
+  if (isUsingInMemory() || !getSupabaseClient()) {
+    return await inMemoryStore.listProjects(filters);
+  }
 
-  let query = supabase.from('projects').select('*').order('created_at', { ascending: false });
+  const supabase = getSupabaseClient();
+  let query = supabase!.from('projects').select('*').order('created_at', { ascending: false });
 
   if (filters?.status) {
     const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
@@ -109,9 +122,13 @@ export async function listProjects(filters?: ProjectFilters): Promise<Project[]>
  * Update project
  */
 export async function updateProject(id: string, updates: ProjectUpdate): Promise<Project> {
-  const supabase = getSupabaseClient();
+  // In-memory fallback
+  if (isUsingInMemory() || !getSupabaseClient()) {
+    return await inMemoryStore.updateProject(id, updates);
+  }
 
-  const { data, error } = await supabase
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase!
     .from('projects')
     .update(updates as any)
     .eq('id', id)
@@ -216,11 +233,16 @@ export async function deleteProject(id: string): Promise<void> {
  * Get project statistics for dashboard
  */
 export async function getProjectStats(filters?: ProjectFilters) {
+  // Use in-memory or Supabase based on connection
+  if (isUsingInMemory() || !getSupabaseClient()) {
+    return await inMemoryStore.getProjectStats();
+  }
+
   const projects = await listProjects(filters);
 
   const stats = {
-    total: projects.length,
-    byStatus: {} as Record<Project['status'], number>,
+    totalProjects: projects.length,
+    projectsByStatus: {} as Record<Project['status'], number>,
     totalBudget: 0,
     totalWishes: 0,
     totalConcerns: 0,
@@ -229,7 +251,7 @@ export async function getProjectStats(filters?: ProjectFilters) {
 
   projects.forEach((project) => {
     // Count by status
-    stats.byStatus[project.status] = (stats.byStatus[project.status] || 0) + 1;
+    stats.projectsByStatus[project.status] = (stats.projectsByStatus[project.status] || 0) + 1;
 
     // Sum budget
     if (project.customer_example?.coreData?.budget) {

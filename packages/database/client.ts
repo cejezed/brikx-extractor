@@ -6,8 +6,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 type Database = any;
 
 let supabaseClient: SupabaseClient<any> | null = null;
+let useInMemory = false;
 
-export function getSupabaseClient(): SupabaseClient<any> {
+export function getSupabaseClient(): SupabaseClient<any> | null {
   if (supabaseClient) {
     return supabaseClient;
   }
@@ -16,19 +17,32 @@ export function getSupabaseClient(): SupabaseClient<any> {
   const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error(
-      'Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_ANON_KEY environment variables.'
-    );
+    console.warn('⚠️  Supabase credentials not found - using IN-MEMORY storage');
+    console.warn('⚠️  Data will be lost on server restart!');
+    useInMemory = true;
+    return null;
   }
 
-  supabaseClient = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: false, // For server-side usage
-      autoRefreshToken: false,
-    },
-  });
+  try {
+    supabaseClient = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false, // For server-side usage
+        autoRefreshToken: false,
+      },
+    });
 
-  return supabaseClient;
+    console.log('✅ Connected to Supabase');
+    return supabaseClient;
+  } catch (error) {
+    console.error('❌ Failed to connect to Supabase:', error);
+    console.warn('⚠️  Falling back to IN-MEMORY storage');
+    useInMemory = true;
+    return null;
+  }
+}
+
+export function isUsingInMemory(): boolean {
+  return useInMemory;
 }
 
 // Helper to create client with custom auth token (for RLS)
