@@ -75,7 +75,7 @@ router.post('/:id/examples/generate', optionalAuth, async (req: AuthRequest, res
     const result = await generateCustomerExamplesForProject(
       projectId,
       project.original_text,
-      project.workspace_id || 'default'
+      project.workspace_id || null
     );
 
     // Save to database

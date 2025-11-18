@@ -17,7 +17,7 @@ import { scoreExample, filterByQuality, generateTags, QUALITY_THRESHOLD } from '
 export async function extractCustomerExamplesFromText(
   text: string,
   projectId: string,
-  workspaceId: string = 'default'
+  workspaceId?: string | null
 ): Promise<ExtractionBatchResult> {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -68,7 +68,7 @@ export async function extractCustomerExamplesFromText(
       const baseRecord = {
         id: randomUUID(),
         project_id: projectId,
-        workspace_id: workspaceId,
+        workspace_id: workspaceId || null,
         example_type: ex.example_type as ExampleType,
         example_data: ex.example_data,
         status: 'pending' as const,

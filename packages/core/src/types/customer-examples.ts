@@ -92,8 +92,8 @@ export interface CustomerExampleRecord {
   /** Source project ID */
   project_id: string;
 
-  /** Workspace for multi-tenancy */
-  workspace_id: string;
+  /** Workspace for multi-tenancy (null for non-workspace projects) */
+  workspace_id: string | null;
 
   /** Type A or Type B */
   example_type: ExampleType;

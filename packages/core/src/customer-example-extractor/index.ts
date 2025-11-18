@@ -16,7 +16,7 @@ import { extractCustomerExamplesFromText } from './extractor.js';
  *
  * @param projectId - The project ID
  * @param originalText - The original PvE text
- * @param workspaceId - Optional workspace ID (defaults to 'default')
+ * @param workspaceId - Optional workspace ID (can be null for non-workspace projects)
  * @returns ExtractionBatchResult with all examples and statistics
  *
  * @example
@@ -37,7 +37,7 @@ import { extractCustomerExamplesFromText } from './extractor.js';
 export async function generateCustomerExamplesForProject(
   projectId: string,
   originalText: string,
-  workspaceId: string = 'default'
+  workspaceId?: string | null
 ): Promise<ExtractionBatchResult> {
   if (!originalText || originalText.trim().length === 0) {
     throw new Error('Original text is empty');

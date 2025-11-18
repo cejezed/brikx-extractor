@@ -67,7 +67,7 @@ function rowToRecord(row: CustomerExampleRow): CustomerExampleRecord {
   return {
     id: row.id,
     project_id: row.project_id,
-    workspace_id: row.workspace_id || 'default',
+    workspace_id: row.workspace_id,
     example_type: row.example_type,
     example_data: row.example_data,
     status: row.status,
