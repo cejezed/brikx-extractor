@@ -54,6 +54,56 @@ export async function extractFromFile(inputPath: string): Promise<ExtractResult>
 }
 
 /**
+ * Extract from raw text (no file parsing needed)
+ *
+ * @param text - Raw text content
+ * @param sourceLabel - Optional label for the source (e.g., "Pasted Text")
+ * @returns ExtractResult containing customer example, patches, and metadata
+ */
+export function extractFromText(text: string, sourceLabel: string = 'Pasted Text'): ExtractResult {
+  // 1. Create raw document
+  const raw = {
+    sourceFile: sourceLabel,
+    text,
+  };
+
+  // 2. Extract core data
+  const coreData = extractCoreData(raw);
+
+  // 3. Extract wishes
+  const wishes = extractWishes(raw);
+
+  // 4. Extract emotional signals
+  const emotionalSignals = extractSignals(raw);
+
+  // 5. Build customer example
+  const example: CustomerExample = {
+    coreData,
+    wishes,
+    emotionalSignals,
+  };
+
+  // 6. Convert to patches
+  const patches = customerExampleToPatches(example);
+
+  // 7. Calculate confidence (simple heuristic for now)
+  const confidence = calculateConfidence(example);
+
+  // 8. Generate warnings
+  const warnings = generateWarnings(example);
+
+  return {
+    customerExample: example,
+    patches,
+    meta: {
+      sourceFile: sourceLabel,
+      confidence,
+      warnings,
+    },
+  };
+}
+
+/**
  * Calculate confidence score based on extracted data
  */
 function calculateConfidence(example: CustomerExample): number {

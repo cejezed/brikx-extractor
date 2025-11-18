@@ -3,7 +3,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { extname } from 'path';
 import { unlink } from 'fs/promises';
-import { extractFromFile } from '@brikx/extractor-core';
+import { extractFromFile, extractFromText } from '@brikx/extractor-core';
 import type { ExtractResult, CustomerExample } from '@brikx/extractor-core';
 import {
   createProject,
@@ -138,6 +138,92 @@ router.post('/upload', optionalAuth, upload.single('file'), async (req: AuthRequ
         await unlink(req.file.path);
       } catch {}
     }
+
+    res.status(500).json({
+      error: 'Upload failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * POST /api/projects/upload-text
+ * Upload and process text directly (no file)
+ */
+router.post('/upload-text', optionalAuth, async (req: AuthRequest, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      return res.status(400).json({ error: 'No text provided' });
+    }
+
+    console.log(`[Upload-Text] Processing pasted text (${text.length} chars)`);
+
+    // Create initial project record
+    const project = await createProject({
+      filename: 'Pasted Text',
+      file_size: text.length,
+      mime_type: 'text/plain',
+      storage_path: null,
+      status: 'processing',
+      created_by: req.user?.id || null,
+      workspace_id: req.user?.workspace_id || null,
+      customer_example: null,
+      patches: null,
+      original_text: text,
+      confidence: null,
+      warnings: null,
+      manual_edits: [],
+      reviewed_at: null,
+      reviewed_by: null,
+      exported_at: null,
+      export_response: null,
+    });
+
+    // Start extraction (synchronous for text)
+    try {
+      const result: ExtractResult = extractFromText(text, 'Pasted Text');
+
+      // Update project with extraction results
+      await updateProject(project.id, {
+        customer_example: result.customerExample as any,
+        patches: result.patches as any,
+        original_text: text,
+        confidence: result.meta.confidence,
+        warnings: result.meta.warnings,
+        status: 'review',
+      });
+
+      console.log(`[Upload-Text] Extraction complete`);
+
+      // Return updated project
+      const updatedProject = await getProject(project.id, {
+        includeChunks: false,
+        includeSuggestions: false,
+      });
+
+      res.json({
+        success: true,
+        project: updatedProject,
+      });
+    } catch (extractError) {
+      console.error(`[Upload-Text] Extraction failed:`, extractError);
+
+      // Update project status to error
+      await updateProject(project.id, {
+        status: 'error',
+        warnings: [extractError instanceof Error ? extractError.message : 'Extraction failed'],
+      });
+
+      res.status(500).json({
+        error: 'Extraction failed',
+        message: extractError instanceof Error ? extractError.message : 'Unknown error',
+        project_id: project.id,
+      });
+    }
+  } catch (error) {
+    console.error('[Upload-Text] Error:', error);
 
     res.status(500).json({
       error: 'Upload failed',

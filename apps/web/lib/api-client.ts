@@ -16,6 +16,8 @@ export type Project = {
   patches: PatchEvent[] | null;
   confidence: number | null;
   warnings: string[] | null;
+  original_text: string | null;
+  mime_type: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -46,6 +48,26 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}/api/projects/upload`, {
       method: 'POST',
       body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Upload failed');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Upload text for processing
+   */
+  async uploadText(text: string): Promise<{ success: boolean; project: Project }> {
+    const response = await fetch(`${this.baseUrl}/api/projects/upload-text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text }),
     });
 
     if (!response.ok) {

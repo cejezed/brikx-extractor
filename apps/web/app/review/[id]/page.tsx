@@ -14,6 +14,7 @@ import { BasisTab } from '@/components/review/basis-tab';
 import { WensenTab } from '@/components/review/wensen-tab';
 import { SignalenTab } from '@/components/review/signalen-tab';
 import { PatchesTab } from '@/components/review/patches-tab';
+import { DocumentViewer } from '@/components/document-viewer';
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -206,22 +207,13 @@ export default function ReviewPage() {
       <div className="container max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left: Document Viewer */}
-          <Card className="h-[calc(100vh-16rem)] overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-lg">Document</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[calc(100%-5rem)] overflow-y-auto">
-              {/* TODO: Implement proper document viewer */}
-              <div className="bg-muted rounded-lg p-4">
-                <p className="text-sm text-muted-foreground">
-                  Document viewer - coming soon
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Bestand: {project.filename}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="h-[calc(100vh-16rem)]">
+            <DocumentViewer
+              filename={project.filename}
+              originalText={project.original_text || null}
+              mimeType={project.mime_type || null}
+            />
+          </div>
 
           {/* Right: Extracted Data Panel */}
           <Card className="h-[calc(100vh-16rem)] overflow-hidden">

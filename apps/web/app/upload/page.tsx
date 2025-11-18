@@ -3,14 +3,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertCircle, Loader2, FileUp, FileText } from 'lucide-react';
 import { FileUpload } from '@/components/file-upload';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiClient, type Project } from '@/lib/api-client';
 
 type UploadStatus = 'idle' | 'uploading' | 'processing' | 'success' | 'error';
+type UploadMode = 'file' | 'text';
 
 export default function UploadPage() {
   const router = useRouter();
@@ -18,6 +21,8 @@ export default function UploadPage() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [project, setProject] = useState<Project | null>(null);
+  const [uploadMode, setUploadMode] = useState<UploadMode>('file');
+  const [pastedText, setPastedText] = useState('');
 
   const handleUpload = async (file: File) => {
     try {
@@ -91,6 +96,48 @@ export default function UploadPage() {
     await poll();
   };
 
+  const handleTextUpload = async () => {
+    if (!pastedText.trim()) {
+      setError('Voer eerst tekst in');
+      return;
+    }
+
+    try {
+      setStatus('uploading');
+      setError(null);
+      setProgress(0);
+
+      // Simulate upload progress
+      const uploadInterval = setInterval(() => {
+        setProgress((prev) => Math.min(prev + 10, 90));
+      }, 200);
+
+      // Upload text
+      const response = await apiClient.uploadText(pastedText);
+
+      clearInterval(uploadInterval);
+      setProgress(100);
+
+      if (response.project.status === 'error') {
+        setStatus('error');
+        setError('Extractie mislukt. Probeer het opnieuw.');
+        return;
+      }
+
+      // If processing, poll for completion
+      if (response.project.status === 'processing') {
+        setStatus('processing');
+        await pollProjectStatus(response.project.id);
+      } else if (response.project.status === 'review') {
+        setProject(response.project);
+        setStatus('success');
+      }
+    } catch (err) {
+      setStatus('error');
+      setError(err instanceof Error ? err.message : 'Upload mislukt');
+    }
+  };
+
   const handleGoToReview = () => {
     if (project) {
       router.push(`/review/${project.id}`);
@@ -114,10 +161,58 @@ export default function UploadPage() {
 
         {/* Upload Area */}
         <div className="space-y-6">
-          <FileUpload
-            onUpload={handleUpload}
-            disabled={status === 'uploading' || status === 'processing'}
-          />
+          <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as UploadMode)}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="file">
+                <FileUp className="mr-2 h-4 w-4" />
+                Bestand Upload
+              </TabsTrigger>
+              <TabsTrigger value="text">
+                <FileText className="mr-2 h-4 w-4" />
+                Tekst Plakken
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="file" className="mt-6">
+              <FileUpload
+                onUpload={handleUpload}
+                disabled={status === 'uploading' || status === 'processing'}
+              />
+            </TabsContent>
+            <TabsContent value="text" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Plak PvE Tekst</CardTitle>
+                  <CardDescription>
+                    Kopieer en plak de tekst van je Programma van Eisen document
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    placeholder="Plak hier je PvE tekst...&#10;&#10;Bijvoorbeeld:&#10;Wij willen graag een nieuwbouw woning in Amsterdam.&#10;Het budget is € 350.000.&#10;We zijn heel enthousiast over dit project..."
+                    value={pastedText}
+                    onChange={(e) => setPastedText(e.target.value)}
+                    className="min-h-[300px] font-mono text-sm"
+                    disabled={status === 'uploading' || status === 'processing'}
+                  />
+                  <Button
+                    onClick={handleTextUpload}
+                    disabled={status === 'uploading' || status === 'processing' || !pastedText.trim()}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {status === 'uploading' || status === 'processing' ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Verwerken...
+                      </>
+                    ) : (
+                      'Analyseer Tekst'
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
           {/* Status Cards */}
           {status === 'uploading' && (
