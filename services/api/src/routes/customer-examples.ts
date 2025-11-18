@@ -111,6 +111,83 @@ router.post('/:id/examples/generate', optionalAuth, async (req: AuthRequest, res
 });
 
 /**
+ * GET /api/examples (all examples across all projects)
+ * List all training examples with optional filters
+ */
+router.get('/examples', optionalAuth, async (req: AuthRequest, res) => {
+  try {
+    const {
+      example_type,
+      status,
+      min_quality,
+      extraction_batch,
+      tags,
+    } = req.query;
+
+    // Build filters (no project_id, so get all)
+    const filters: CustomerExampleFilters = {};
+
+    if (example_type) {
+      filters.example_type = example_type as ExampleType;
+    }
+
+    if (status) {
+      // Support multiple statuses separated by comma
+      if (typeof status === 'string' && status.includes(',')) {
+        filters.status = status.split(',') as ExampleStatus[];
+      } else {
+        filters.status = status as ExampleStatus;
+      }
+    }
+
+    if (min_quality && typeof min_quality === 'string') {
+      filters.min_quality = parseFloat(min_quality);
+    }
+
+    if (extraction_batch) {
+      filters.extraction_batch = extraction_batch as string;
+    }
+
+    if (tags && typeof tags === 'string') {
+      // Support multiple tags separated by comma
+      filters.tags = tags.split(',');
+    }
+
+    const examples = await listTrainingExamples(filters);
+
+    // Calculate global stats from the results
+    const stats = {
+      total: examples.length,
+      byType: {
+        DIRECT_ACTIONABLE: examples.filter((e) => e.example_type === 'DIRECT_ACTIONABLE').length,
+        EMOTIONAL_SIGNAL: examples.filter((e) => e.example_type === 'EMOTIONAL_SIGNAL').length,
+      },
+      byStatus: {
+        pending: examples.filter((e) => e.status === 'pending').length,
+        approved: examples.filter((e) => e.status === 'approved').length,
+        rejected: examples.filter((e) => e.status === 'rejected').length,
+      },
+      averageQuality:
+        examples.length > 0
+          ? examples.reduce((sum, e) => sum + e.quality_score, 0) / examples.length
+          : 0,
+    };
+
+    return res.json({
+      examples,
+      stats,
+      filters: filters,
+    });
+  } catch (error: any) {
+    console.error('[API] Failed to list all customer examples:', error);
+    return res.status(500).json({
+      error: 'Failed to list examples',
+      message: error.message,
+    });
+  }
+});
+
+/**
  * GET /api/projects/:id/examples
  * List training examples for a project with optional filters
  */
