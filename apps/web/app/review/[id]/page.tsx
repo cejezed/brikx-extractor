@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Check, Upload as UploadIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Check, Upload as UploadIcon, Loader2, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +99,35 @@ export default function ReviewPage() {
     }
   };
 
+  const handleDownloadReport = async () => {
+    if (!project) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/projects/${project.id}/extraction-report?format=json`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to download report');
+      }
+
+      const report = await response.json();
+
+      // Create blob and download
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `extraction-report-${project.filename}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Download mislukt');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
@@ -168,6 +197,14 @@ export default function ReviewPage() {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleDownloadReport}
+                title="Download extraction report (JSON)"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Report
+              </Button>
               <Button
                 variant="outline"
                 onClick={handleSave}
