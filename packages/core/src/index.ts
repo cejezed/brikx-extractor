@@ -167,3 +167,11 @@ export * from './types/index.js';
 
 // Re-export converter function (needed by database package for manual edits)
 export { customerExampleToPatches } from './toPatches/toPatches.js';
+
+// Re-export report generators
+export {
+  generateExtractionReport,
+  exportReportAsJSON,
+  exportReportAsText,
+  type ExtractionReport,
+} from './reports/extraction-report.js';

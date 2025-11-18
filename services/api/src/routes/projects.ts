@@ -3,7 +3,13 @@ import { Router } from 'express';
 import multer from 'multer';
 import { extname } from 'path';
 import { unlink } from 'fs/promises';
-import { extractFromFile, extractFromText } from '@brikx/extractor-core';
+import {
+  extractFromFile,
+  extractFromText,
+  generateExtractionReport,
+  exportReportAsJSON,
+  exportReportAsText,
+} from '@brikx/extractor-core';
 import type { ExtractResult, CustomerExample } from '@brikx/extractor-core';
 import {
   createProject,
@@ -459,6 +465,67 @@ router.delete('/:id', optionalAuth, async (req: AuthRequest, res) => {
     console.error('[Delete] Error:', error);
     res.status(500).json({
       error: 'Failed to delete project',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * GET /api/projects/:id/extraction-report
+ * Get extraction report for quality control
+ * Query params:
+ *   - format: 'json' | 'text' (default: 'json')
+ */
+router.get('/:id/extraction-report', optionalAuth, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const format = (req.query.format as string) || 'json';
+
+    // Get project
+    const project = await getProject(id);
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    if (!project.customer_example || !project.patches || !project.original_text) {
+      return res.status(400).json({
+        error: 'Project has no extraction data',
+        message: 'Upload and extract a document first',
+      });
+    }
+
+    // Rebuild ExtractResult
+    const extractResult: ExtractResult = {
+      customerExample: project.customer_example,
+      patches: project.patches,
+      meta: {
+        sourceFile: project.filename,
+        confidence: project.confidence || 0,
+        warnings: project.warnings || [],
+      },
+    };
+
+    // Generate report
+    const report = generateExtractionReport(
+      project.original_text,
+      extractResult,
+      'ai' // Assume AI if we have good extraction, otherwise 'rules'
+    );
+
+    console.log(`[Report] Generated extraction report for project ${id}`);
+
+    // Return in requested format
+    if (format === 'text') {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.send(exportReportAsText(report));
+    } else {
+      res.json(report);
+    }
+  } catch (error) {
+    console.error('[Report] Error:', error);
+    res.status(500).json({
+      error: 'Failed to generate report',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
