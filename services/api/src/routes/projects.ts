@@ -23,7 +23,15 @@ const router: Router = Router();
 
 // Configure multer for file uploads
 const upload = multer({
-  dest: '/tmp/brikx-uploads',
+  storage: multer.diskStorage({
+    destination: '/tmp/brikx-uploads',
+    filename: (req, file, cb) => {
+      // Keep original extension for parseFile to work correctly
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = extname(file.originalname);
+      cb(null, `upload-${uniqueSuffix}${ext}`);
+    },
+  }),
   limits: {
     fileSize: 50 * 1024 * 1024, // 50MB max
   },
