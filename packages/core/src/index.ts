@@ -175,3 +175,13 @@ export {
   exportReportAsText,
   type ExtractionReport,
 } from './reports/extraction-report.js';
+
+// Re-export customer example extraction (for Jules training)
+export {
+  generateCustomerExamplesForProject,
+  extractCustomerExamplesFromText,
+  isCustomerExampleExtractionAvailable,
+  scoreExample,
+  filterByQuality,
+  QUALITY_THRESHOLD,
+} from './customer-example-extractor/index.js';

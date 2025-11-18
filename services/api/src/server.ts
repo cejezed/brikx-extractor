@@ -9,6 +9,7 @@ import express from 'express';
 import cors from 'cors';
 import projectsRouter from './routes/projects.js';
 import featureFlagsRouter from './routes/feature-flags.js';
+import customerExamplesRouter from './routes/customer-examples.js';
 import { isUsingInMemory } from '@brikx/extractor-database';
 
 const app = express();
@@ -30,6 +31,8 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/projects', projectsRouter);
+app.use('/api/projects', customerExamplesRouter); // Customer examples under /api/projects/:id/examples/*
+app.use('/api', customerExamplesRouter); // Also mount at /api for /api/examples/:id
 app.use('/api/feature-flags', featureFlagsRouter);
 
 // Legacy /convert endpoint (backwards compatibility with original design)
@@ -94,18 +97,23 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 app.listen(PORT, () => {
   console.log(`\n🚀 Brikx PvE Analyzer API running on http://localhost:${PORT}`);
   console.log(`\n📋 Available endpoints:`);
-  console.log(`   GET  /health                       - Health check`);
-  console.log(`   POST /api/projects/upload          - Upload PvE document`);
-  console.log(`   GET  /api/projects                 - List all projects`);
-  console.log(`   GET  /api/projects/stats           - Get statistics`);
-  console.log(`   GET  /api/projects/:id             - Get project details`);
-  console.log(`   PATCH /api/projects/:id            - Update project (manual edits)`);
-  console.log(`   POST /api/projects/:id/export      - Export to Brikx`);
-  console.log(`   DELETE /api/projects/:id           - Delete project`);
-  console.log(`   GET  /api/feature-flags            - List feature flags`);
-  console.log(`   GET  /api/feature-flags/:name      - Get feature flag`);
-  console.log(`   PATCH /api/feature-flags/:name     - Update feature flag`);
-  console.log(`   POST /convert                      - Legacy convert endpoint\n`);
+  console.log(`   GET  /health                              - Health check`);
+  console.log(`   POST /api/projects/upload                 - Upload PvE document`);
+  console.log(`   GET  /api/projects                        - List all projects`);
+  console.log(`   GET  /api/projects/stats                  - Get statistics`);
+  console.log(`   GET  /api/projects/:id                    - Get project details`);
+  console.log(`   PATCH /api/projects/:id                   - Update project (manual edits)`);
+  console.log(`   POST /api/projects/:id/export             - Export to Brikx`);
+  console.log(`   DELETE /api/projects/:id                  - Delete project`);
+  console.log(`   POST /api/projects/:id/examples/generate  - Generate training examples`);
+  console.log(`   GET  /api/projects/:id/examples           - List training examples`);
+  console.log(`   GET  /api/projects/:id/examples/stats     - Get example statistics`);
+  console.log(`   GET  /api/examples/:exampleId             - Get single example`);
+  console.log(`   PATCH /api/examples/:exampleId            - Update example status`);
+  console.log(`   GET  /api/feature-flags                   - List feature flags`);
+  console.log(`   GET  /api/feature-flags/:name             - Get feature flag`);
+  console.log(`   PATCH /api/feature-flags/:name            - Update feature flag`);
+  console.log(`   POST /convert                             - Legacy convert endpoint\n`);
 
   // Database status
   if (isUsingInMemory()) {

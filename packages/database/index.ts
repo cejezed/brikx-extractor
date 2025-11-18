@@ -9,6 +9,7 @@ export { inMemoryStore } from './in-memory-store.js';
 // Query functions
 export * from './queries/projects.js';
 export * from './queries/feature-flags.js';
+export * from './queries/customer-examples.js';
 
 // Re-export core types for convenience (but they originate from @brikx/extractor-core)
 export type {
@@ -21,4 +22,10 @@ export type {
   ChapterKey,
   ExtractResult,
   ExtractMeta,
+  CustomerExampleRecord,
+  ExampleType,
+  ExampleStatus,
+  DirectActionableExample,
+  EmotionalSignalExample,
+  ExtractionBatchResult,
 } from '@brikx/extractor-core';
