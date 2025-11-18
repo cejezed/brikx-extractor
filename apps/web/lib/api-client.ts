@@ -3,6 +3,9 @@ import type {
   CustomerExample,
   PatchEvent,
   ExtractResult,
+  CustomerExampleRecord,
+  ExampleType,
+  ExampleStatus,
 } from '@brikx/extractor-core';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -29,6 +32,33 @@ export type ProjectStats = {
   totalWishes: number;
   totalConcerns: number;
   totalEnthusiasm: number;
+};
+
+export type TrainingExampleStats = {
+  total: number;
+  byType: { DIRECT_ACTIONABLE: number; EMOTIONAL_SIGNAL: number };
+  byStatus: { pending: number; approved: number; rejected: number };
+  averageQuality: number;
+};
+
+export type ExamplesListResponse = {
+  examples: CustomerExampleRecord[];
+  stats: TrainingExampleStats;
+  filters: any;
+};
+
+export type GenerateExamplesResponse = {
+  success: boolean;
+  batchId: string;
+  stats: {
+    total: number;
+    typeA: number;
+    typeB: number;
+    averageQuality: number;
+    belowThreshold: number;
+  };
+  warnings: string[];
+  examples: CustomerExampleRecord[];
 };
 
 class ApiClient {
@@ -183,6 +213,114 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error('Delete failed');
+    }
+
+    return response.json();
+  }
+
+  // ==================== Training Examples API ====================
+
+  /**
+   * Generate training examples from a project
+   */
+  async generateTrainingExamples(projectId: string): Promise<GenerateExamplesResponse> {
+    const response = await fetch(`${this.baseUrl}/api/projects/${projectId}/examples/generate`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to generate examples');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * List training examples with filters
+   */
+  async listTrainingExamples(
+    projectId?: string,
+    filters?: {
+      example_type?: ExampleType;
+      status?: ExampleStatus | ExampleStatus[];
+      min_quality?: number;
+      tags?: string[];
+      extraction_batch?: string;
+    }
+  ): Promise<ExamplesListResponse> {
+    const params = new URLSearchParams();
+
+    if (filters?.example_type) params.append('example_type', filters.example_type);
+    if (filters?.status) {
+      const statuses = Array.isArray(filters.status) ? filters.status.join(',') : filters.status;
+      params.append('status', statuses);
+    }
+    if (filters?.min_quality !== undefined) params.append('min_quality', filters.min_quality.toString());
+    if (filters?.extraction_batch) params.append('extraction_batch', filters.extraction_batch);
+    if (filters?.tags && filters.tags.length > 0) params.append('tags', filters.tags.join(','));
+
+    const url = projectId
+      ? `${this.baseUrl}/api/projects/${projectId}/examples${params.toString() ? `?${params}` : ''}`
+      : `${this.baseUrl}/api/examples${params.toString() ? `?${params}` : ''}`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch training examples');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get training example statistics for a project
+   */
+  async getTrainingExampleStats(projectId: string): Promise<TrainingExampleStats> {
+    const response = await fetch(`${this.baseUrl}/api/projects/${projectId}/examples/stats`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch example stats');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get single training example
+   */
+  async getTrainingExample(exampleId: string): Promise<CustomerExampleRecord> {
+    const response = await fetch(`${this.baseUrl}/api/examples/${exampleId}`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch training example');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Update training example status (approve/reject)
+   */
+  async updateTrainingExampleStatus(
+    exampleId: string,
+    status: ExampleStatus,
+    reviewNotes?: string
+  ): Promise<CustomerExampleRecord> {
+    const response = await fetch(`${this.baseUrl}/api/examples/${exampleId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status,
+        review_notes: reviewNotes,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update example');
     }
 
     return response.json();

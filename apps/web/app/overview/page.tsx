@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, RefreshCw, Loader2 } from 'lucide-react';
+import { Upload, RefreshCw, Loader2, Sparkles } from 'lucide-react';
 import { apiClient, type Project } from '@/lib/api-client';
 import { StatsCards } from '@/components/overview/stats-cards';
 import { ProjectsTable } from '@/components/overview/projects-table';
@@ -90,6 +90,12 @@ export default function OverviewPage() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/training/examples">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Training Examples
+                </Link>
+              </Button>
               <Button variant="outline" onClick={loadData}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Ververs

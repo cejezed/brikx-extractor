@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Check, Upload as UploadIcon, Loader2, Download } from 'lucide-react';
+import { ArrowLeft, Save, Check, Upload as UploadIcon, Loader2, Download, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setIsSaving] = useState(false);
   const [exporting, setIsExporting] = useState(false);
+  const [generatingExamples, setGeneratingExamples] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [changedFields, setChangedFields] = useState<string[]>([]);
@@ -128,6 +129,25 @@ export default function ReviewPage() {
     }
   };
 
+  const handleGenerateExamples = async () => {
+    if (!project) return;
+
+    try {
+      setGeneratingExamples(true);
+      setError(null);
+      const result = await apiClient.generateTrainingExamples(project.id);
+
+      // Show success message and navigate to training examples
+      alert(`Gelukt! ${result.stats.total} training examples gegenereerd (${result.stats.typeA} Type A, ${result.stats.typeB} Type B). Gemiddelde kwaliteit: ${(result.stats.averageQuality * 100).toFixed(0)}%`);
+      router.push('/training/examples');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Genereren mislukt');
+      alert(err instanceof Error ? err.message : 'Genereren mislukt');
+    } finally {
+      setGeneratingExamples(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
@@ -204,6 +224,24 @@ export default function ReviewPage() {
               >
                 <Download className="h-4 w-4 mr-2" />
                 Report
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleGenerateExamples}
+                disabled={generatingExamples}
+                title="Genereer training examples voor Jules"
+              >
+                {generatingExamples ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Genereren...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Training Examples
+                  </>
+                )}
               </Button>
               <Button
                 variant="outline"
