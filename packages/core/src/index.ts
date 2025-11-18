@@ -4,6 +4,7 @@ import { extractCoreData } from './normalize/normalize-core.js';
 import { extractWishes } from './normalize/extract-wishes.js';
 import { extractSignals } from './signals/extract-signals.js';
 import { customerExampleToPatches } from './toPatches/toPatches.js';
+import { extractWithOpenAI, isOpenAIConfigured } from './ai/openai-extractor.js';
 import type { ExtractResult } from './types/extract-result.js';
 import type { CustomerExample } from './types/customer-example.js';
 
@@ -17,26 +18,26 @@ export async function extractFromFile(inputPath: string): Promise<ExtractResult>
   // 1. Parse the file
   const raw = await parseFile(inputPath);
 
-  // 2. Extract core data
-  const coreData = extractCoreData(raw);
+  // 2. Try AI extraction first if configured
+  let example: CustomerExample;
 
-  // 3. Extract wishes
-  const wishes = extractWishes(raw);
-
-  // 4. Extract emotional signals
-  const emotionalSignals = extractSignals(raw);
-
-  // 5. Build customer example
-  const example: CustomerExample = {
-    coreData,
-    wishes,
-    emotionalSignals,
-  };
+  if (isOpenAIConfigured()) {
+    try {
+      console.log('[Extractor] Using AI-powered extraction (OpenAI)');
+      example = await extractWithOpenAI(raw.text);
+    } catch (error) {
+      console.warn('[Extractor] AI extraction failed, falling back to rule-based:', error);
+      example = extractWithRules(raw);
+    }
+  } else {
+    console.log('[Extractor] Using rule-based extraction (no AI configured)');
+    example = extractWithRules(raw);
+  }
 
   // 6. Convert to patches
   const patches = customerExampleToPatches(example);
 
-  // 7. Calculate confidence (simple heuristic for now)
+  // 7. Calculate confidence
   const confidence = calculateConfidence(example);
 
   // 8. Generate warnings
@@ -60,36 +61,32 @@ export async function extractFromFile(inputPath: string): Promise<ExtractResult>
  * @param sourceLabel - Optional label for the source (e.g., "Pasted Text")
  * @returns ExtractResult containing customer example, patches, and metadata
  */
-export function extractFromText(text: string, sourceLabel: string = 'Pasted Text'): ExtractResult {
-  // 1. Create raw document
-  const raw = {
-    sourceFile: sourceLabel,
-    text,
-  };
+export async function extractFromText(text: string, sourceLabel: string = 'Pasted Text'): Promise<ExtractResult> {
+  // Try AI extraction first if configured
+  let example: CustomerExample;
 
-  // 2. Extract core data
-  const coreData = extractCoreData(raw);
+  if (isOpenAIConfigured()) {
+    try {
+      console.log('[Extractor] Using AI-powered extraction (OpenAI)');
+      example = await extractWithOpenAI(text);
+    } catch (error) {
+      console.warn('[Extractor] AI extraction failed, falling back to rule-based:', error);
+      const raw = { sourceFile: sourceLabel, text };
+      example = extractWithRules(raw);
+    }
+  } else {
+    console.log('[Extractor] Using rule-based extraction (no AI configured)');
+    const raw = { sourceFile: sourceLabel, text };
+    example = extractWithRules(raw);
+  }
 
-  // 3. Extract wishes
-  const wishes = extractWishes(raw);
-
-  // 4. Extract emotional signals
-  const emotionalSignals = extractSignals(raw);
-
-  // 5. Build customer example
-  const example: CustomerExample = {
-    coreData,
-    wishes,
-    emotionalSignals,
-  };
-
-  // 6. Convert to patches
+  // Convert to patches
   const patches = customerExampleToPatches(example);
 
-  // 7. Calculate confidence (simple heuristic for now)
+  // Calculate confidence
   const confidence = calculateConfidence(example);
 
-  // 8. Generate warnings
+  // Generate warnings
   const warnings = generateWarnings(example);
 
   return {
@@ -100,6 +97,21 @@ export function extractFromText(text: string, sourceLabel: string = 'Pasted Text
       confidence,
       warnings,
     },
+  };
+}
+
+/**
+ * Rule-based extraction (fallback when AI is not available)
+ */
+function extractWithRules(raw: { sourceFile: string; text: string }): CustomerExample {
+  const coreData = extractCoreData(raw);
+  const wishes = extractWishes(raw);
+  const emotionalSignals = extractSignals(raw);
+
+  return {
+    coreData,
+    wishes,
+    emotionalSignals,
   };
 }
 

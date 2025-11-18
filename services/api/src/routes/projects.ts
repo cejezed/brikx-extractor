@@ -181,9 +181,9 @@ router.post('/upload-text', optionalAuth, async (req: AuthRequest, res) => {
       export_response: null,
     });
 
-    // Start extraction (synchronous for text)
+    // Start extraction (now async with AI support)
     try {
-      const result: ExtractResult = extractFromText(text, 'Pasted Text');
+      const result: ExtractResult = await extractFromText(text, 'Pasted Text');
 
       // Update project with extraction results
       await updateProject(project.id, {
